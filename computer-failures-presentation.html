@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Anatomy of Failure — Computer Errors, Faults & Incidents</title>
+<style>
+/* ============================================================
+   THE ANATOMY OF FAILURE — self-contained keynote deck
+   No external dependencies. Works fully offline.
+   Navigate: → / Space / click = next   ·   ← = back
+   F = fullscreen · N = speaker notes · O = overview · ? = help
+   ============================================================ */
+
+:root{
+  --bg-0:#04060d;
+  --bg-1:#0a0f1f;
+  --bg-2:#101732;
+  --ink:#eaf0fb;
+  --ink-soft:#c4cde0;
+  --muted:#8693ad;
+  --faint:#5a6580;
+  --line:rgba(255,255,255,.09);
+  --line-2:rgba(255,255,255,.05);
+  --cyan:#28d7f0;
+  --cyan-dim:#1aa7bd;
+  --amber:#f7b733;
+  --amber-dim:#c98f1f;
+  --red:#ff5470;
+  --red-dim:#c93a52;
+  --green:#34e1a5;
+  --violet:#a98bff;
+  --blue:#5b8dff;
+  --card:rgba(255,255,255,.035);
+  --card-2:rgba(255,255,255,.06);
+  --glass:rgba(13,19,38,.72);
+  --shadow:0 30px 80px -30px rgba(0,0,0,.8);
+  --r:18px;
+  --serif:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --mono:"Cascadia Code","JetBrains Mono",Consolas,ui-monospace,monospace;
+  --sans:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,"Inter",Roboto,sans-serif;
+}
+
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%; width:100%; overflow:hidden;}
+body{
+  background:var(--bg-0);
+  color:var(--ink);
+  font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  letter-spacing:.005em;
+}
+
+/* ---------- Animated ambient background ---------- */
+.bg{position:fixed; inset:0; z-index:0; overflow:hidden;}
+.bg::before{
+  content:""; position:absolute; inset:-20%;
+  background:
+    radial-gradient(60% 50% at 18% 12%, rgba(40,215,240,.16), transparent 60%),
+    radial-gradient(55% 55% at 85% 18%, rgba(169,139,255,.13), transparent 60%),
+    radial-gradient(60% 60% at 75% 88%, rgba(255,84,112,.12), transparent 62%),
+    radial-gradient(50% 50% at 12% 85%, rgba(247,183,51,.10), transparent 60%);
+  filter:blur(20px);
+  animation:drift 26s ease-in-out infinite alternate;
+}
+@keyframes drift{
+  0%{transform:translate3d(0,0,0) scale(1);}
+  50%{transform:translate3d(2%,-2%,0) scale(1.06);}
+  100%{transform:translate3d(-2%,1%,0) scale(1.03);}
+}
+.bg::after{ /* fine grid + vignette */
+  content:""; position:absolute; inset:0;
+  background:
+    linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px) 0 0/64px 64px,
+    linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px) 0 0/64px 64px,
+    radial-gradient(120% 120% at 50% 42%, transparent 55%, rgba(0,0,0,.65) 100%);
+  mask:radial-gradient(120% 120% at 50% 40%, #000 60%, transparent 100%);
+}
+.grain{position:fixed; inset:0; z-index:1; pointer-events:none; opacity:.5;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/><feColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .04 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* ---------- Deck / slides ---------- */
+.deck{position:fixed; inset:0; z-index:2;}
+.slide{
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; justify-content:center;
+  padding:4.6vmin 5.6vmin;
+  opacity:0; visibility:hidden;
+  transform:translateY(34px) scale(.985);
+  transition:opacity .55s cubic-bezier(.2,.7,.2,1), transform .55s cubic-bezier(.2,.7,.2,1), visibility .55s;
+  will-change:opacity,transform;
+}
+.slide.active{opacity:1; visibility:visible; transform:none;}
+.slide.exit-left{transform:translateY(-26px) scale(.985); opacity:0;}
+
+/* center variant */
+.slide.center{align-items:center; text-align:center;}
+.wrap{width:100%; max-width:1400px; margin:0 auto;}
+
+/* ---------- Typography ---------- */
+.kicker{
+  display:inline-flex; align-items:center; gap:.6em;
+  font-size:clamp(11px,1.35vmin,16px); font-weight:700;
+  letter-spacing:.34em; text-transform:uppercase;
+  color:#28d7f0;
+}
+.kicker::before{content:""; width:30px; height:2px; background:linear-gradient(90deg,#28d7f0,transparent); border-radius:2px;}
+.kicker.amber{color:#f7b733;} .kicker.amber::before{background:linear-gradient(90deg,#f7b733,transparent);}
+.kicker.red{color:#ff5470;} .kicker.red::before{background:linear-gradient(90deg,#ff5470,transparent);}
+.kicker.violet{color:#a98bff;} .kicker.violet::before{background:linear-gradient(90deg,#a98bff,transparent);}
+.kicker.green{color:#34e1a5;} .kicker.green::before{background:linear-gradient(90deg,#34e1a5,transparent);}
+
+h1{font-size:clamp(34px,7.4vmin,92px); font-weight:800; line-height:1.02; letter-spacing:-.02em;}
+h2{font-size:clamp(28px,5.4vmin,62px); font-weight:800; line-height:1.05; letter-spacing:-.015em;}
+h3{font-size:clamp(20px,3vmin,34px); font-weight:700; line-height:1.12;}
+.lead{font-size:clamp(17px,2.45vmin,29px); color:var(--ink-soft); line-height:1.5; font-weight:400;}
+.small{font-size:clamp(12px,1.6vmin,18px); color:#8693ad; line-height:1.55;}
+.tiny{font-size:clamp(10px,1.2vmin,13px); color:var(--faint);}
+.grad{background:linear-gradient(100deg,#28d7f0,#a98bff 55%,#f7b733); -webkit-background-clip:text; background-clip:text; color:transparent;}
+.grad-hot{background:linear-gradient(100deg,#f7b733,#ff5470); -webkit-background-clip:text; background-clip:text; color:transparent;}
+.u-cyan{color:#28d7f0;} .u-amber{color:#f7b733;} .u-red{color:#ff5470;} .u-green{color:#34e1a5;} .u-violet{color:#a98bff;}
+em{color:var(--ink); font-style:normal; font-weight:700;}
+.mono{font-family:var(--mono);}
+
+/* ---------- Fragments ---------- */
+.fragment{opacity:0; transform:translateY(14px); transition:opacity .5s ease, transform .5s cubic-bezier(.2,.7,.2,1); will-change:opacity,transform;}
+.fragment.visible{opacity:1; transform:none;}
+.fragment.fade{transform:none;}
+.fragment.scale{transform:scale(.9);} .fragment.scale.visible{transform:none;}
+
+/* slide entrance for headline blocks */
+.slide.active .reveal-up{animation:up .7s cubic-bezier(.2,.7,.2,1) both;}
+.slide.active .reveal-up.d1{animation-delay:.08s;}
+.slide.active .reveal-up.d2{animation-delay:.18s;}
+.slide.active .reveal-up.d3{animation-delay:.3s;}
+.slide.active .reveal-up.d4{animation-delay:.42s;}
+@keyframes up{from{opacity:0; transform:translateY(26px);} to{opacity:1; transform:none;}}
+
+/* ---------- Components ---------- */
+.row{display:flex; gap:24px;}
+.col{flex:1; min-width:0;}
+.stack{display:flex; flex-direction:column;}
+.gap-s{gap:10px;} .gap-m{gap:18px;} .gap-l{gap:30px;}
+.mt-s{margin-top:14px;} .mt-m{margin-top:26px;} .mt-l{margin-top:42px;}
+
+.chip{
+  display:inline-flex; align-items:center; gap:.5em;
+  padding:.4em .85em; border-radius:999px;
+  background:rgba(255,255,255,.06); border:1px solid var(--line);
+  font-size:clamp(11px,1.45vmin,15px); font-weight:600; color:var(--ink-soft);
+}
+.chip .dot{width:8px; height:8px; border-radius:50%; background:#28d7f0; box-shadow:0 0 12px #28d7f0;}
+.chip.amber .dot{background:#f7b733; box-shadow:0 0 12px #f7b733;}
+.chip.red .dot{background:#ff5470; box-shadow:0 0 12px #ff5470;}
+.chip.violet .dot{background:#a98bff; box-shadow:0 0 12px #a98bff;}
+.chip.green .dot{background:#34e1a5; box-shadow:0 0 12px #34e1a5;}
+
+.card{
+  background:var(--card); border:1px solid var(--line);
+  border-radius:var(--r); padding:clamp(16px,2.3vmin,28px);
+  backdrop-filter:blur(6px);
+}
+.card.glow{box-shadow:0 0 0 1px var(--line), 0 24px 60px -36px rgba(40,215,240,.5);}
+
+.grid{display:grid; gap:18px;}
+.g2{grid-template-columns:repeat(2,1fr);}
+.g3{grid-template-columns:repeat(3,1fr);}
+.g4{grid-template-columns:repeat(4,1fr);}
+.g5{grid-template-columns:repeat(5,1fr);}
+
+/* big stat */
+.stat .n{font-size:clamp(30px,6.4vmin,76px); font-weight:800; line-height:1; letter-spacing:-.02em;}
+.stat .l{font-size:clamp(12px,1.5vmin,16px); color:#8693ad; margin-top:.5em; line-height:1.4;}
+
+/* pull quote */
+.pull{
+  font-size:clamp(22px,4.2vmin,52px); font-weight:800; line-height:1.18; letter-spacing:-.015em;
+}
+.pull .mk{color:var(--faint); font-weight:800;}
+
+/* ---------- The fault→failure CHAIN ---------- */
+.chain{display:flex; align-items:stretch; gap:0; position:relative;}
+.chain .node{
+  position:relative; flex:1; text-align:center;
+  border:1px solid var(--line); border-radius:16px;
+  padding:clamp(12px,1.8vmin,22px) 10px;
+  background:linear-gradient(180deg,rgba(255,255,255,.06),var(--card));
+}
+.chain .node .ico{font-size:clamp(20px,3.4vmin,38px); line-height:1;}
+.chain .node .t{font-weight:800; font-size:clamp(13px,1.8vmin,21px); margin-top:.5em; letter-spacing:.01em;}
+.chain .node .d{font-size:clamp(10px,1.25vmin,13.5px); color:#8693ad; margin-top:.35em; line-height:1.35;}
+.chain .arrow{
+  display:flex; align-items:center; justify-content:center;
+  width:clamp(26px,4vmin,54px); flex:0 0 auto; color:var(--faint);
+  font-size:clamp(16px,2.4vmin,26px);
+}
+.chain .node.c0{box-shadow:inset 0 0 0 1px rgba(91,141,255,.4), 0 18px 40px -28px rgba(91,141,255,.6);}
+.chain .node.c1{box-shadow:inset 0 0 0 1px rgba(40,215,240,.4), 0 18px 40px -28px rgba(40,215,240,.6);}
+.chain .node.c2{box-shadow:inset 0 0 0 1px rgba(169,139,255,.45), 0 18px 40px -28px rgba(169,139,255,.6);}
+.chain .node.c3{box-shadow:inset 0 0 0 1px rgba(247,183,51,.45), 0 18px 40px -28px rgba(247,183,51,.6);}
+.chain .node.c4{box-shadow:inset 0 0 0 1px rgba(255,84,112,.5), 0 18px 40px -28px rgba(255,84,112,.65);}
+.chain .node .badge{position:absolute; top:-11px; left:50%; transform:translateX(-50%); font-size:clamp(9px,1.05vmin,11px); font-weight:800; letter-spacing:.18em; text-transform:uppercase; padding:.25em .7em; border-radius:999px; background:var(--bg-2); border:1px solid var(--line); color:#8693ad;}
+
+/* traveling pulse on the chain hero */
+.chain.live .node{animation:nodepulse 5s ease-in-out infinite;}
+.chain.live .node.c0{animation-delay:0s;}
+.chain.live .node.c1{animation-delay:.5s;}
+.chain.live .node.c2{animation-delay:1s;}
+.chain.live .node.c3{animation-delay:1.5s;}
+.chain.live .node.c4{animation-delay:2s;}
+@keyframes nodepulse{0%,70%,100%{transform:translateY(0);} 12%{transform:translateY(-8px);}}
+
+/* ---------- definition table ---------- */
+.deftable{width:100%; border-collapse:separate; border-spacing:0;}
+.deftable td,.deftable th{padding:clamp(8px,1.4vmin,15px) clamp(10px,1.6vmin,20px); text-align:left; border-bottom:1px solid var(--line-2); vertical-align:top;}
+.deftable th{font-size:clamp(10px,1.2vmin,13px); text-transform:uppercase; letter-spacing:.18em; color:var(--faint); font-weight:700;}
+.deftable .term{font-weight:800; font-size:clamp(14px,1.9vmin,22px); white-space:nowrap;}
+.deftable .mean{color:var(--ink-soft); font-size:clamp(12px,1.55vmin,17px);}
+.deftable .ex{color:#8693ad; font-size:clamp(11px,1.45vmin,16px);}
+.deftable tr td:first-child{border-left:3px solid transparent;}
+.deftable tr.r0 td:first-child{border-left-color:var(--blue);}
+.deftable tr.r1 td:first-child{border-left-color:#28d7f0;}
+.deftable tr.r2 td:first-child{border-left-color:#a98bff;}
+.deftable tr.r3 td:first-child{border-left-color:#f7b733;}
+.deftable tr.r4 td:first-child{border-left-color:#ff5470;}
+
+/* ---------- case study layout ---------- */
+.case{display:grid; grid-template-columns:0.92fr 1.35fr; gap:34px; align-items:start;}
+.case .meta .label{font-size:clamp(10px,1.2vmin,13px); letter-spacing:.2em; text-transform:uppercase; color:var(--faint); font-weight:700;}
+.case .meta .cat{font-size:clamp(14px,1.9vmin,20px); color:var(--ink-soft); font-weight:600; margin-top:.3em;}
+.case .stats{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:6px;}
+.case .lesson{border-left:3px solid #f7b733; padding-left:18px;}
+.case .lesson .lt{font-size:clamp(11px,1.3vmin,14px); letter-spacing:.16em; text-transform:uppercase; color:#f7b733; font-weight:800;}
+.case .src{font-family:var(--mono); font-size:clamp(10px,1.1vmin,12.5px); color:var(--faint);}
+.qmark{font-family:var(--serif); font-size:2.4em; color:var(--faint); line-height:0; vertical-align:-.35em; margin-right:.1em;}
+
+.tag{display:inline-block; padding:.3em .7em; border-radius:8px; font-size:clamp(10px,1.25vmin,13.5px); font-weight:700; letter-spacing:.04em;}
+.tag.hw{background:rgba(91,141,255,.16); color:#9db8ff;}
+.tag.sw{background:rgba(40,215,240,.15); color:#7fe6f5;}
+.tag.net{background:rgba(52,225,165,.14); color:#7af0c8;}
+.tag.proc{background:rgba(247,183,51,.16); color:#f7cd77;}
+.tag.sec{background:rgba(255,84,112,.16); color:#ff97a8;}
+.tag.iface{background:rgba(169,139,255,.16); color:#c4b0ff;}
+
+/* ---------- case illustrations ---------- */
+.case{grid-template-columns:1.12fr 1.24fr; gap:30px;}
+.illus{position:relative; width:100%; border-radius:16px; border:1px solid var(--line);
+  background:radial-gradient(130% 130% at 25% 0%, rgba(255,255,255,.06), rgba(255,255,255,.012));
+  overflow:hidden; box-shadow:0 22px 60px -34px rgba(0,0,0,.85);}
+.illus svg{display:block; width:100%; height:auto;}
+.illus .frame-cap{position:absolute; left:12px; bottom:8px; font-family:var(--mono);
+  font-size:10px; letter-spacing:.04em; color:var(--faint);}
+.illus text{font-family:var(--sans);}
+.illus .mono{font-family:var(--mono);}
+.statstrip{display:flex; flex-wrap:wrap; gap:10px;}
+.statstrip .pill{flex:1 1 116px; background:rgba(255,255,255,.06); border:1px solid var(--line);
+  border-radius:12px; padding:9px 13px;}
+.statstrip .pill .n{font-weight:800; font-size:clamp(16px,2.5vmin,28px); line-height:1; letter-spacing:-.01em;}
+.statstrip .pill .l{font-size:clamp(10px,1.25vmin,13.5px); color:#8693ad; margin-top:4px; line-height:1.3;}
+
+/* generic illustration keyframes — play when the slide becomes active */
+@keyframes ill-draw{to{stroke-dashoffset:0;}}
+@keyframes ill-fade{from{opacity:0;}to{opacity:1;}}
+@keyframes ill-pop{0%{opacity:0; transform:scale(.2);}70%{opacity:1;}100%{opacity:1; transform:scale(1);}}
+@keyframes ill-groww{from{width:0;}to{width:var(--w,100px);}}
+@keyframes ill-tx{from{transform:translateX(var(--x0,0px));}to{transform:translateX(var(--x1,0px));}}
+@keyframes ill-ty{from{transform:translateY(0);}to{transform:translateY(var(--ty,-22px));}}
+@keyframes ill-blink{0%{opacity:0;}15%{opacity:1;}32%{opacity:.35;}50%{opacity:1;}68%{opacity:.45;}100%{opacity:1;}}
+@keyframes ill-bsodblue{0%,35%{fill:#070b16;}65%,100%{fill:#1357d6;}}
+.illus .pop{transform-box:fill-box; transform-origin:center;}
+
+.slide.active .ill-bsod .screen{animation:ill-bsodblue 1.2s ease both;}
+.slide.active .ill-bsod .sad{animation:ill-pop .55s .55s ease both;}
+.slide.active .ill-bsod .prog{animation:ill-groww 2.2s .7s ease-out both;}
+.slide.active .ill-bsod .shield{animation:ill-fade .6s 1.15s ease both;}
+
+.slide.active .ill-ariane .traj{animation:ill-draw 1.5s .2s ease-out both;}
+.slide.active .ill-ariane .fillbar{animation:ill-groww 1.7s .3s ease-out both;}
+.slide.active .ill-ariane .ovf,
+.slide.active .ill-ariane .ovftext,
+.slide.active .ill-ariane .ovflabel{animation:ill-blink 1s 1.7s ease both;}
+.slide.active .ill-ariane .boom-inner{animation:ill-pop .5s 1.6s ease both;}
+
+.slide.active .ill-mars .planned{animation:ill-draw 1.3s .2s ease-out both;}
+.slide.active .ill-mars .actual{animation:ill-draw 1.3s 1.05s ease-out both;}
+.slide.active .ill-mars .mboom{animation:ill-pop .5s 2.15s ease both;}
+.slide.active .ill-mars .mult{animation:ill-blink 1.1s 1.4s ease both;}
+
+.slide.active .ill-cs .ptr{animation:ill-tx 2s .3s cubic-bezier(.5,.05,.5,1) both;}
+.slide.active .ill-cs .oob{animation:ill-blink 1s 2.2s ease both;}
+.slide.active .ill-cs .machines{animation:ill-fade .8s 2.35s ease both;}
+.slide.active .ill-cs .csbsod{animation:ill-pop .5s 2.3s ease both;}
+
+.slide.active .ill-therac .target{animation:ill-ty .6s .7s ease both;}
+.slide.active .ill-therac .beam{animation:ill-groww 1s 1.25s ease-out both;}
+.slide.active .ill-therac .dosearc{animation:ill-draw 1.4s 1.2s ease-out both;}
+.slide.active .ill-therac .dosehi{animation:ill-fade .5s 2.1s ease both;}
+.slide.active .ill-therac .doselo{animation:ill-fade .5s 2.1s ease reverse both;}
+.slide.active .ill-therac .malf{animation:ill-blink .9s 2.15s ease both;}
+
+.slide.active .ill-knight .srv{animation:ill-fade .4s ease both;}
+.slide.active .ill-knight .pp{animation:ill-blink 1.1s .95s ease both;}
+.slide.active .ill-knight .ord circle{animation:ill-fade .5s ease both;}
+.slide.active .ill-knight .pnl{animation:ill-draw 1.7s 1.1s ease-out both;}
+.slide.active .ill-knight .pnlval{animation:ill-fade .6s 2.5s ease both;}
+
+@media (prefers-reduced-motion: reduce){
+  .slide.active .illus *{animation-duration:.001s !important; animation-delay:0s !important;}
+}
+
+/* swiss-cheese / defense layers */
+.cheese{display:flex; flex-direction:column; gap:12px;}
+.layer{position:relative; display:flex; align-items:center; gap:16px; padding:12px 18px; border-radius:12px; background:rgba(255,255,255,.06); border:1px solid var(--line); overflow:hidden;}
+.layer .lname{font-weight:700; font-size:clamp(13px,1.7vmin,18px); min-width:38%;}
+.layer .lwhat{color:#8693ad; font-size:clamp(11px,1.4vmin,15px);}
+.layer .holes{position:absolute; inset:0; pointer-events:none;}
+.layer .holes span{position:absolute; top:50%; width:26px; height:26px; border-radius:50%; background:radial-gradient(circle,var(--bg-0) 55%,transparent 60%); transform:translateY(-50%);}
+
+/* divider slide big index number */
+.bignum{font-size:clamp(70px,22vmin,260px); font-weight:800; line-height:.8; letter-spacing:-.04em; color:transparent; -webkit-text-stroke:2px rgba(255,255,255,.14);}
+
+/* hook cards */
+.hookcard{position:relative; padding:clamp(16px,2.4vmin,28px); border-radius:16px; background:var(--card); border:1px solid var(--line); overflow:hidden;}
+.hookcard .big{font-size:clamp(26px,5vmin,60px); font-weight:800; line-height:1; letter-spacing:-.02em;}
+.hookcard .cap{margin-top:.55em; color:var(--ink-soft); font-size:clamp(12px,1.55vmin,17px); line-height:1.4;}
+.hookcard .ev{margin-top:.3em; color:var(--faint); font-size:clamp(11px,1.3vmin,14px);}
+.hookcard::after{content:""; position:absolute; left:0; right:0; bottom:0; height:3px; background:linear-gradient(90deg,#28d7f0,#f7b733,#ff5470);}
+
+/* ---------- chrome: progress, counter, controls ---------- */
+.progress{position:fixed; left:0; bottom:0; height:3px; z-index:40; background:linear-gradient(90deg,#28d7f0,#a98bff,#f7b733); width:0; transition:width .45s cubic-bezier(.2,.7,.2,1); box-shadow:0 0 16px rgba(40,215,240,.6);}
+.hud{position:fixed; z-index:40; bottom:16px; display:flex; align-items:center; gap:10px; color:var(--faint); font-size:12px; font-family:var(--mono);}
+.hud.right{right:20px;}
+.hud.left{left:20px;}
+.hud .seg{color:var(--ink-soft);}
+.brandmark{display:flex; align-items:center; gap:9px; font-weight:700; letter-spacing:.02em; color:#8693ad; font-size:12px;}
+.brandmark .glyph{width:18px; height:18px; border-radius:5px; background:conic-gradient(from 200deg,#28d7f0,#a98bff,#f7b733,#ff5470,#28d7f0); box-shadow:0 0 14px rgba(40,215,240,.4);}
+.navbtns{position:fixed; right:18px; bottom:42px; z-index:40; display:flex; gap:8px;}
+.navbtns button{width:38px; height:38px; border-radius:10px; border:1px solid var(--line); background:var(--glass); color:var(--ink-soft); font-size:17px; cursor:pointer; backdrop-filter:blur(8px); transition:.2s; display:flex; align-items:center; justify-content:center;}
+.navbtns button:hover{background:rgba(255,255,255,.06); color:#fff; border-color:rgba(255,255,255,.22);}
+
+/* speaker notes */
+.notes{position:fixed; z-index:50; left:0; right:0; bottom:0; max-height:42vh; overflow:auto;
+  background:linear-gradient(180deg,rgba(6,9,18,.6),rgba(6,9,18,.97)); border-top:1px solid var(--line);
+  padding:22px 26px 30px; transform:translateY(110%); transition:transform .4s cubic-bezier(.2,.7,.2,1); backdrop-filter:blur(10px);}
+.notes.show{transform:none;}
+.notes h4{font-size:13px; letter-spacing:.2em; text-transform:uppercase; color:#28d7f0; margin-bottom:8px;}
+.notes .nbody{color:var(--ink-soft); font-size:15px; line-height:1.6; max-width:1100px;}
+.notes .nbody b{color:#fff;}
+.notes .timing{float:right; font-family:var(--mono); color:#f7b733; font-size:13px;}
+
+/* overview */
+.deck.overview{transform:scale(1);}
+.deck.overview .slide{transition:.4s; cursor:pointer;}
+body.ov .deck{position:fixed; inset:0; display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:24px; overflow:auto; transform:none;}
+body.ov .slide{position:relative; inset:auto; opacity:1; visibility:visible; transform:scale(1); border:1px solid var(--line); border-radius:10px; aspect-ratio:16/9; padding:14px; pointer-events:auto; overflow:hidden;}
+body.ov .slide *{pointer-events:none;}
+body.ov .slide.active{outline:2px solid #28d7f0;}
+body.ov .slide .fragment{opacity:1; transform:none;}
+body.ov .hud,body.ov .navbtns,body.ov .progress{display:none;}
+
+/* help overlay */
+.help{position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center; background:rgba(4,6,13,.82); backdrop-filter:blur(6px);}
+.help.show{display:flex;}
+.help .panel{background:var(--bg-1); border:1px solid var(--line); border-radius:18px; padding:34px 40px; max-width:520px; box-shadow:var(--shadow);}
+.help h3{margin-bottom:18px;}
+.help .k{display:flex; justify-content:space-between; gap:24px; padding:9px 0; border-bottom:1px solid var(--line-2); font-size:15px; color:var(--ink-soft);}
+.help kbd{font-family:var(--mono); background:rgba(255,255,255,.06); border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:2px 9px; font-size:13px; color:#fff;}
+
+/* hint toast */
+.hint{position:fixed; z-index:45; left:50%; bottom:54px; transform:translateX(-50%); background:var(--glass); border:1px solid var(--line); border-radius:999px; padding:9px 18px; font-size:13px; color:var(--ink-soft); backdrop-filter:blur(8px); display:flex; align-items:center; gap:10px; transition:opacity .6s; box-shadow:var(--shadow);}
+.hint kbd{font-family:var(--mono); background:rgba(255,255,255,.06); border:1px solid var(--line); border-radius:5px; padding:1px 7px; font-size:12px; color:#fff;}
+
+/* scrollbar */
+::-webkit-scrollbar{width:10px; height:10px;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12); border-radius:8px;}
+
+@media (max-width:760px){
+  .case{grid-template-columns:1fr;}
+  .g4,.g5{grid-template-columns:repeat(2,1fr);}
+  .g3{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="grain"></div>
+
+<div class="deck" id="deck">
+
+  <!-- 1 · TITLE ------------------------------------------------>
+  <section class="slide center" data-notes="<b>Open with energy.</b> Hold a beat on the title. Tell them: today we trace how a single hidden flaw becomes a global incident. ~8–10 min, 4 real cases, one idea: <b>failure is a chain, not an accident.</b>" data-timing="0:00">
+    <div class="wrap">
+      <div class="kicker reveal-up d1" style="justify-content:center">Professional Practices · Software Reliability &amp; Ethics</div>
+      <h1 class="reveal-up d2" style="margin-top:.35em">The Anatomy<br>of <span class="grad-hot">Failure</span></h1>
+      <p class="lead reveal-up d3" style="margin-top:.8em; max-width:760px; margin-inline:auto">
+        How a single human assumption becomes a hidden fault — and how a hidden fault becomes a rocket that explodes, an airline that grounds, a patient who dies.
+      </p>
+      <div class="reveal-up d4" style="margin-top:2.2em; display:flex; gap:22px; justify-content:center; flex-wrap:wrap">
+        <span class="chip"><span class="dot"></span>error → fault → failure → incident</span>
+        <span class="chip amber"><span class="dot"></span>4 case studies</span>
+        <span class="chip red"><span class="dot"></span>1 idea: failure is a chain</span>
+      </div>
+      <p class="tiny reveal-up" style="margin-top:1.6em; animation-delay:.6s; letter-spacing:.05em">Presented <strong style="color:var(--ink-soft)">4 June 2026</strong> — 30 years to the day since Ariane 5 Flight 501 exploded over Kourou.</p>
+    </div>
+  </section>
+
+  <!-- 2 · HOOK -------------------------------------------------->
+  <section class="slide" data-notes="<b>The hook.</b> Four images of failure that look <i>sudden</i> from the outside. Ask the room: what do a blue screen, an exploding rocket, a lost spacecraft, and grounded airlines have in common? Answer on the next slide — they all had a <b>history</b> inside the system." data-timing="0:45">
+    <div class="wrap">
+      <span class="kicker">The view from outside</span>
+      <h2 class="mt-s reveal-up d1">From outside, failure looks like <span class="grad-hot">one sudden moment.</span></h2>
+      <div class="grid g4 mt-l">
+        <div class="hookcard fragment"><div class="big u-cyan">💙</div><div class="cap">A screen turns blue.</div><div class="ev">Windows stop error</div></div>
+        <div class="hookcard fragment"><div class="big u-amber">🚀</div><div class="cap">A rocket explodes.</div><div class="ev">Ariane 5 · 37 seconds</div></div>
+        <div class="hookcard fragment"><div class="big u-violet">🛰️</div><div class="cap">A spacecraft vanishes.</div><div class="ev">Mars Climate Orbiter</div></div>
+        <div class="hookcard fragment"><div class="big u-red">✈️</div><div class="cap">The world grounds.</div><div class="ev">CrowdStrike · 8.5M devices</div></div>
+      </div>
+      <p class="lead mt-l fragment" style="text-align:center">But inside the system, the failure almost always had a <em>history.</em></p>
+    </div>
+  </section>
+
+  <!-- 3 · THESIS ------------------------------------------------>
+  <section class="slide center" data-notes="<b>The thesis. Say this slowly.</b> This is the spine of the whole talk. Not 'computers crash sometimes' — but that failure is a <b>chain</b> of human, design, and process decisions that propagate until they become visible harm. Everything else hangs off this." data-timing="1:30">
+    <div class="wrap">
+      <span class="kicker amber" style="justify-content:center">The thesis</span>
+      <p class="pull mt-m reveal-up d1">
+        Computer failures are rarely single random events.<br>
+        They are <span class="grad">chains.</span>
+      </p>
+      <p class="lead mt-l reveal-up d2" style="max-width:880px; margin-inline:auto">
+        A human mistake, a design assumption, a hidden fault, a weak process, a missing safeguard —
+        each propagates to the next until it becomes a <em>visible failure</em> and <em>real-world harm.</em>
+      </p>
+    </div>
+  </section>
+
+  <!-- 4 · DEFINITIONS ------------------------------------------->
+  <section class="slide" data-notes="Teachers grade terminology. Make the vocabulary precise. <b>Fault</b> = the hidden flaw. <b>Error</b> = the wrong internal state when that flaw activates. <b>Failure</b> = when the wrong state reaches the boundary and becomes visible. <b>Incident</b> = when that visible failure hurts people/money/trust. Source model: Avizienis, Laprie &amp; Randell, IEEE/ISO." data-timing="2:00">
+    <div class="wrap">
+      <span class="kicker">Speak precisely</span>
+      <h2 class="mt-s reveal-up d1">Five words people use as if they were one</h2>
+      <div class="card mt-m reveal-up d2" style="padding:6px 6px 2px">
+        <table class="deftable">
+          <thead><tr><th>Term</th><th>What it really means</th><th>Concrete example</th></tr></thead>
+          <tbody>
+            <tr class="r0 fragment"><td class="term u-blue">Mistake</td><td class="mean">A human misunderstanding or wrong action</td><td class="ex">A developer misreads the requirement</td></tr>
+            <tr class="r1 fragment"><td class="term u-cyan">Fault · bug</td><td class="mean">A hidden flaw left inside code, hardware, design or config</td><td class="ex">A bad unit conversion; an overflow waiting to happen</td></tr>
+            <tr class="r2 fragment"><td class="term u-violet">Error</td><td class="mean">The incorrect <em>internal</em> state when the fault is activated</td><td class="ex">The system now holds a wrong value</td></tr>
+            <tr class="r3 fragment"><td class="term u-amber">Failure</td><td class="mean">The wrong behaviour, now <em>externally visible</em></td><td class="ex">App crashes · rocket veers · payment fails</td></tr>
+            <tr class="r4 fragment"><td class="term u-red">Incident</td><td class="mean">A failure with operational, social or business <em>impact</em></td><td class="ex">Flights cancelled · hospitals delayed · money lost</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small mt-s fragment">Core model — <span class="mono">fault → error → failure</span> — formalised by <em>Avizienis, Laprie &amp; Randell (2004).</em> A fault can lie dormant for years; it turns dangerous only when <em>activated</em>, and becomes a failure only when the wrong state crosses the <em>service boundary.</em> We bracket it with the human <em>mistake</em> before and the operational <em>incident</em> after.</p>
+      <p class="tiny fragment" style="margin-top:8px">🦟 The first “bug” was literal — a moth taped into Harvard’s Mark&nbsp;II logbook, 1947: <span class="mono">“First actual case of bug being found.”</span></p>
+    </div>
+  </section>
+
+  <!-- 5 · THE CHAIN (hero) -------------------------------------->
+  <section class="slide center" data-notes="<b>The hero diagram.</b> Walk left to right with the pulse. Same flaw, five stages. The punchline: a 'small bug' is harmless in one context and catastrophic in another — because what matters is whether the chain is allowed to <b>propagate</b>. Reference: Microsoft's own bug-check docs use this logic — Windows halts to stop the chain before data is corrupted." data-timing="2:40">
+    <div class="wrap" style="max-width:1240px">
+      <span class="kicker red" style="justify-content:center">The propagation chain</span>
+      <h2 class="mt-s reveal-up d1">One flaw, five stages, rising stakes</h2>
+      <div class="chain live mt-l reveal-up d2">
+        <div class="node c0"><span class="badge">human</span><div class="ico">🧠</div><div class="t">Mistake</div><div class="d">A wrong assumption is made</div></div>
+        <div class="arrow">→</div>
+        <div class="node c1"><span class="badge">latent</span><div class="ico">🐞</div><div class="t">Fault</div><div class="d">It hides in the system</div></div>
+        <div class="arrow">→</div>
+        <div class="node c2"><span class="badge">activated</span><div class="ico">⚡</div><div class="t">Error</div><div class="d">Internal state goes wrong</div></div>
+        <div class="arrow">→</div>
+        <div class="node c3"><span class="badge">visible</span><div class="ico">💥</div><div class="t">Failure</div><div class="d">Behaviour breaks in the open</div></div>
+        <div class="arrow">→</div>
+        <div class="node c4"><span class="badge">impact</span><div class="ico">🌍</div><div class="t">Incident</div><div class="d">People, money &amp; trust are hurt</div></div>
+      </div>
+      <p class="lead mt-l fragment">Every safeguard in engineering exists to <em>break this chain</em> before the last arrow.</p>
+    </div>
+  </section>
+
+  <!-- 6 · PUNCHLINE internal/visible ---------------------------->
+  <section class="slide center" data-notes="A clean, quotable line to lock in the vocabulary. Pause after each clause." data-timing="3:20">
+    <div class="wrap">
+      <p class="pull reveal-up d1">
+        An <span class="u-violet">error</span> is internal.<br>
+        A <span class="u-amber">failure</span> is visible.<br>
+        An <span class="u-red">incident</span> is when that visible failure<br><span class="grad-hot">hurts people, money, trust, or operations.</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- 7 · WHY IT MATTERS ---------------------------------------->
+  <section class="slide" data-notes="The 'so what'. Computers stopped being isolated machines — they run hospitals, aviation, banks, identity, cloud, exams, trading. The more society depends on software, the less acceptable it is to call errors 'just technical bugs'. This is the Professional Practices pivot — ties to the ACM Code of Ethics (high quality in process and product; consider serious negative consequences)." data-timing="3:00">
+    <div class="wrap">
+      <span class="kicker amber">Why a Professional Practices topic</span>
+      <h2 class="mt-s reveal-up d1">Software stopped being <span class="u-amber">isolated.</span></h2>
+      <p class="lead mt-s reveal-up d2" style="max-width:820px">It now runs hospitals, aircraft, banks, identity systems, cloud platforms, exams and trading floors. So a bug is no longer just a technical event — it is a <em>social</em> one.</p>
+      <div class="card glow fragment mt-s" style="display:flex; align-items:center; gap:22px; border-color:rgba(247,183,51,.32)">
+        <div class="stat" style="white-space:nowrap"><div class="n grad-hot">$2.41T</div></div>
+        <div><div class="lead" style="font-size:clamp(14px,1.95vmin,22px)">The estimated cost of <em>poor software quality</em> in the US — <em>every single year.</em></div><div class="src" style="margin-top:4px">Source: CISQ — The Cost of Poor Software Quality in the US, 2022</div></div>
+      </div>
+      <div class="grid g5 mt-m">
+        <div class="card fragment"><div style="font-size:2em">🏥</div><h3 class="mt-s">Safety</h3><p class="small mt-s">Medical, aviation, transport, infrastructure</p></div>
+        <div class="card fragment"><div style="font-size:2em">💸</div><h3 class="mt-s">Money</h3><p class="small mt-s">Trading, payments, banking, outages</p></div>
+        <div class="card fragment"><div style="font-size:2em">🤝</div><h3 class="mt-s">Trust</h3><p class="small mt-s">Confidence in systems &amp; institutions</p></div>
+        <div class="card fragment"><div style="font-size:2em">🌐</div><h3 class="mt-s">Society</h3><p class="small mt-s">Communication, exams, public services</p></div>
+        <div class="card fragment"><div style="font-size:2em">⚖️</div><h3 class="mt-s">Duty</h3><p class="small mt-s">Engineers must design for failure &amp; recovery</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · RELIABILITY REDEFINED --------------------------------->
+  <section class="slide center" data-notes="The reframing punchline. This is the line examiners remember. Reliability is not the absence of bugs — it is the presence of containment." data-timing="3:40">
+    <div class="wrap">
+      <span class="kicker green" style="justify-content:center">Reframe reliability</span>
+      <p class="pull mt-m reveal-up d1">
+        A reliable system is <span class="u-red">not</span> one that never has bugs.
+      </p>
+      <p class="pull mt-m reveal-up d2">
+        It is one where bugs are <span class="u-green">expected, contained,<br>detected and recovered from</span><br>before they become disasters.
+      </p>
+    </div>
+  </section>
+
+  <!-- 9 · TAXONOMY divider -------------------------------------->
+  <section class="slide" data-notes="Short transition. Three lenses to classify any failure — by cause, by duration, by behaviour. Don't drown them in the table; land the closing line: real failures are mixed, socio-technical chains." data-timing="3:00">
+    <div class="wrap row" style="align-items:center; gap:40px">
+      <div class="bignum reveal-up d1">01</div>
+      <div>
+        <span class="kicker">A researcher's toolkit</span>
+        <h2 class="mt-s reveal-up d2">Three ways to<br>classify a failure</h2>
+        <p class="lead mt-s reveal-up d3" style="max-width:560px">By its <em class="u-cyan">cause</em>, by its <em class="u-amber">duration</em>, and by its <em class="u-red">behaviour</em>. Using more than one axis is what makes analysis feel rigorous.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · TAXONOMY by source ----------------------------------->
+  <section class="slide" data-notes="Axis A — by source/cause. Six families. Tie each to a case you'll show: interface→Mars, security/supply-chain→CrowdStrike, process→Knight, software→Ariane." data-timing="3:15">
+    <div class="wrap">
+      <span class="kicker">Axis A · by source &amp; cause</span>
+      <h2 class="mt-s reveal-up d1">Where the flaw is born</h2>
+      <div class="grid g3 mt-m">
+        <div class="card fragment"><span class="tag hw">Hardware</span><p class="small mt-s">A physical component fails — disk crash, RAM error, overheating.</p></div>
+        <div class="card fragment"><span class="tag sw">Software</span><p class="small mt-s">Logic behaves wrongly — overflow, race condition, memory leak.</p></div>
+        <div class="card fragment"><span class="tag net">Network</span><p class="small mt-s">Connectivity, routing or DNS breaks — BGP outage, packet loss.</p></div>
+        <div class="card fragment"><span class="tag proc">Human / process</span><p class="small mt-s">Bad deploy, weak review, poor comms — wrong config to production.</p></div>
+        <div class="card fragment"><span class="tag sec">Security / supply-chain</span><p class="small mt-s">A trusted update becomes the failure source — CrowdStrike.</p></div>
+        <div class="card fragment"><span class="tag iface">Interface / integration</span><p class="small mt-s">Two systems disagree on units, format or protocol — Mars Orbiter.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 · TAXONOMY by duration + behaviour --------------------->
+  <section class="slide" data-notes="Axes B and C together to save time. Duration: transient / intermittent / permanent. Behaviour: crash, omission, timing, value, Byzantine. Note Byzantine = inconsistent/conflicting outputs in distributed systems (Lamport). Then land the next slide's line." data-timing="3:30">
+    <div class="wrap">
+      <div class="row gap-l" style="align-items:flex-start">
+        <div class="col">
+          <span class="kicker amber">Axis B · by duration</span>
+          <div class="stack gap-s mt-s">
+            <div class="card fragment"><h3 class="u-amber">Transient</h3><p class="small mt-s">Temporary; disappears on its own — a network glitch.</p></div>
+            <div class="card fragment"><h3 class="u-amber">Intermittent</h3><p class="small mt-s">Comes and goes; hard to reproduce — a loose connector, a race.</p></div>
+            <div class="card fragment"><h3 class="u-amber">Permanent</h3><p class="small mt-s">Stays until repaired — a dead disk, a broken release.</p></div>
+          </div>
+        </div>
+        <div class="col">
+          <span class="kicker red">Axis C · by behaviour</span>
+          <div class="stack gap-s mt-s">
+            <div class="card fragment"><h3 class="u-red">Crash / fail-stop</h3><p class="small mt-s">Stops completely — BSOD, kernel panic.</p></div>
+            <div class="card fragment"><h3 class="u-red">Omission &amp; timing</h3><p class="small mt-s">No response, or a response too late — a server timeout, a missed deadline.</p></div>
+            <div class="card fragment"><h3 class="u-red">Value &amp; Byzantine</h3><p class="small mt-s">Wrong output, or inconsistent &amp; conflicting outputs across nodes.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 · socio-technical -------------------------------------->
+  <section class="slide center" data-notes="The bridge into the cases. Real failures don't sit in one box — they're mixed. Software AND human AND process. That's the point of calling them socio-technical chains." data-timing="4:00">
+    <div class="wrap">
+      <p class="pull reveal-up d1">Most real failures are <span class="u-red">not</span> only software,<br>or only human error.</p>
+      <p class="pull mt-m reveal-up d2">They are <span class="grad">socio-technical chains.</span></p>
+    </div>
+  </section>
+
+  <!-- 13 · CASES divider ---------------------------------------->
+  <section class="slide" data-notes="Transition into the evidence. Four primary cases, two optional. Tell them each case maps to the same chain — watch for where the chain could have been broken." data-timing="4:00">
+    <div class="wrap row" style="align-items:center; gap:40px">
+      <div class="bignum reveal-up d1">02</div>
+      <div>
+        <span class="kicker amber">The evidence</span>
+        <h2 class="mt-s reveal-up d2">Four failures,<br>one pattern</h2>
+        <div class="reveal-up d3 mt-s" style="display:flex; gap:10px; flex-wrap:wrap">
+          <span class="chip"><span class="dot"></span>BSOD</span>
+          <span class="chip amber"><span class="dot"></span>Ariane 5</span>
+          <span class="chip violet"><span class="dot"></span>Mars Orbiter</span>
+          <span class="chip red"><span class="dot"></span>CrowdStrike</span>
+        </div>
+        <p class="small mt-s reveal-up d3">+ two for a darker, ethical tone: <span class="u-ink">Therac-25</span> &amp; <span class="u-ink">Knight Capital</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14 · CASE BSOD -------------------------------------------->
+  <section class="slide" data-notes="<b>Case 1 — BSOD.</b> Reframe it: a BSOD is not 'Windows being bad'. Microsoft's bug-check docs describe it as a deliberate halt when continuing would compromise safe operation — risking data corruption or security. So the crash screen is also a <b>safety boundary</b>: the system fails <i>stop</i> rather than fail <i>dangerous</i>." data-timing="4:00">
+    <div class="wrap">
+      <div class="case">
+        <div class="meta stack gap-m">
+          <div><span class="kicker">Case 01</span><h2 class="mt-s reveal-up d1">Blue Screen<br>of Death</h2></div>
+          <div class="illus reveal-up d2">
+            <svg viewBox="0 0 420 250" class="ill-bsod" role="img" aria-label="A Windows stop screen shown as a deliberate, protective halt">
+              <rect x="44" y="22" width="332" height="188" rx="14" fill="#070b16" stroke="rgba(255,255,255,.12)"/>
+              <rect x="196" y="210" width="28" height="11" fill="#070b16"/>
+              <rect x="170" y="221" width="80" height="5" rx="2" fill="#0a0f1f"/>
+              <rect class="screen" x="56" y="34" width="308" height="150" rx="6" fill="#1357d6"/>
+              <text class="sad pop" x="78" y="78" font-size="34" font-weight="800" fill="#fff">:(</text>
+              <text x="80" y="102" font-size="11.5" fill="#e3edff">Your device ran into a problem</text>
+              <text x="80" y="118" font-size="11.5" fill="#e3edff">and needs to restart.</text>
+              <rect x="80" y="130" width="118" height="4" rx="2" fill="rgba(255,255,255,.28)"/>
+              <rect class="prog" x="80" y="130" width="0" height="4" rx="2" fill="#fff" style="--w:118px"/>
+              <text x="80" y="152" font-size="8.5" class="mono" fill="#bcd4ff">STOP CODE: KERNEL_SECURITY_CHECK_FAILURE</text>
+              <text x="80" y="165" font-size="8.5" class="mono" fill="#bcd4ff">collecting error info · preserving state…</text>
+              <g class="shield">
+                <path d="M330 120 l18 7 v13 c0 12 -9 19 -18 23 c-9 -4 -18 -11 -18 -23 v-13 z" fill="rgba(255,255,255,.14)" stroke="#fff" stroke-width="1.4"/>
+                <path d="M322 142 l5 5 l10 -11" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </g>
+            </svg>
+            <span class="frame-cap">fail-stop · a protective halt</span>
+          </div>
+          <div class="fragment"><div class="cat"><span class="tag sw">OS / kernel</span> <span class="tag hw">fail-stop crash</span></div></div>
+        </div>
+        <div class="stack gap-m">
+          <div class="statstrip fragment">
+            <div class="pill"><div class="n u-cyan">STOP</div><div class="l">A deliberate kernel halt — not a random glitch</div></div>
+            <div class="pill"><div class="n u-cyan">PROTECT</div><div class="l">Continuing could corrupt data or break security</div></div>
+          </div>
+          <p class="lead fragment">A kernel-level driver, device, memory region, file system or service pushes Windows into an <em>unsafe state.</em> Rather than continue and corrupt everything, the OS <em>stops on purpose</em> and preserves diagnostics.</p>
+          <div class="card glow fragment"><div class="lesson"><div class="lt">Professional lesson</div><p class="lead" style="font-size:clamp(15px,2vmin,22px); margin-top:.4em">Sometimes <em>stopping is the safe choice.</em> A good system fails safely, keeps evidence, and helps recovery.</p></div></div>
+          <p class="fragment" style="font-size:clamp(15px,2.2vmin,26px); font-weight:700; line-height:1.25"><span class="qmark">“</span>The BSOD is a failure — but also a <span class="u-cyan">safety boundary:</span> the system stops before unsafe continuation does worse.”</p>
+          <p class="src fragment">Source: Microsoft Learn — “Bug Checks (Stop Code Errors)”</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15 · CASE Ariane 5 ---------------------------------------->
+  <section class="slide" data-notes="<b>Case 2 — Ariane 5 Flight 501, 4 June 1996</b> (today's date 28 years on — nice touch). The killer detail: a 64-bit floating-point horizontal-velocity value was converted to a 16-bit signed integer → overflow → unhandled exception → both inertial reference units shut down → guidance lost → self-destruct ~37s. The code was <b>reused from Ariane 4</b>, where horizontal velocity never got that high. The value wasn't even needed after liftoff. ~$370M lost." data-timing="4:45">
+    <div class="wrap">
+      <div class="case">
+        <div class="meta stack gap-m">
+          <div><span class="kicker amber">Case 02</span><h2 class="mt-s reveal-up d1">Ariane 5<br>Flight 501</h2><p class="small mt-s reveal-up d2">Maiden flight · 4 June 1996 &nbsp;<span class="chip amber" style="vertical-align:middle">🎂 30 years ago — today</span></p></div>
+          <div class="illus reveal-up d2">
+            <svg viewBox="0 0 420 250" class="ill-ariane" role="img" aria-label="A 16-bit register overflowing as the rocket's horizontal velocity climbs">
+              <line x1="40" y1="118" x2="392" y2="118" stroke="rgba(255,255,255,.12)"/>
+              <path class="traj" d="M52 118 C 130 116, 180 70, 250 42" fill="none" stroke="#f7b733" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="260" stroke-dashoffset="260"/>
+              <g transform="translate(250 42)"><g class="boom-inner pop">
+                <g stroke="#ff5470" stroke-width="2.6" stroke-linecap="round">
+                  <line x1="0" y1="-17" x2="0" y2="-7"/><line x1="0" y1="17" x2="0" y2="7"/>
+                  <line x1="-17" y1="0" x2="-7" y2="0"/><line x1="17" y1="0" x2="7" y2="0"/>
+                  <line x1="-12" y1="-12" x2="-5" y2="-5"/><line x1="12" y1="12" x2="5" y2="5"/>
+                  <line x1="12" y1="-12" x2="5" y2="-5"/><line x1="-12" y1="12" x2="-5" y2="5"/>
+                </g><circle r="6" fill="#f7b733"/>
+              </g></g>
+              <text x="52" y="136" font-size="9" class="mono" fill="#8693ad">horizontal velocity ↑ 5× vs Ariane 4</text>
+              <text x="60" y="170" font-size="9" class="mono" fill="#8693ad">BH → 16-bit signed integer · max 32 767</text>
+              <rect class="fillbar" x="60" y="178" width="0" height="28" fill="#f7b733" opacity=".55" style="--w:288px"/>
+              <g fill="none" stroke="rgba(255,255,255,.22)">
+                <rect x="60" y="178" width="16" height="28"/><rect x="78" y="178" width="16" height="28"/><rect x="96" y="178" width="16" height="28"/><rect x="114" y="178" width="16" height="28"/><rect x="132" y="178" width="16" height="28"/><rect x="150" y="178" width="16" height="28"/><rect x="168" y="178" width="16" height="28"/><rect x="186" y="178" width="16" height="28"/><rect x="204" y="178" width="16" height="28"/><rect x="222" y="178" width="16" height="28"/><rect x="240" y="178" width="16" height="28"/><rect x="258" y="178" width="16" height="28"/><rect x="276" y="178" width="16" height="28"/><rect x="294" y="178" width="16" height="28"/><rect x="312" y="178" width="16" height="28"/><rect x="330" y="178" width="16" height="28"/>
+              </g>
+              <rect class="ovf" x="352" y="178" width="44" height="28" rx="4" fill="rgba(255,84,112,.14)" stroke="#ff5470" opacity="0"/>
+              <text class="ovftext" x="374" y="197" font-size="14" font-weight="800" fill="#ff5470" text-anchor="middle" opacity="0">!</text>
+              <text class="ovflabel" x="374" y="224" font-size="8.5" font-weight="800" fill="#ff5470" text-anchor="middle" opacity="0">OVERFLOW</text>
+            </svg>
+            <span class="frame-cap">value failure · operand overflow</span>
+          </div>
+          <div class="fragment"><div class="cat"><span class="tag sw">software reuse</span> <span class="tag proc">inadequate testing</span></div></div>
+        </div>
+        <div class="stack gap-m">
+          <div class="statstrip fragment">
+            <div class="pill"><div class="n u-amber">37s</div><div class="l">From liftoff to self-destruct</div></div>
+            <div class="pill"><div class="n u-amber">&gt;$370M</div><div class="l">Launcher &amp; 4 Cluster satellites lost</div></div>
+            <div class="pill"><div class="n u-amber">64→16</div><div class="l">bit float cast to signed int → overflow</div></div>
+            <div class="pill"><div class="n u-amber">2 / 2</div><div class="l">Primary &amp; backup failed identically</div></div>
+          </div>
+          <p class="lead fragment">A horizontal-velocity value — a <span class="mono">64-bit float</span> — was converted to a <span class="mono">16-bit signed integer.</span> On Ariane 5's faster trajectory it <em>overflowed</em>, threw an unhandled exception, and shut down <em>both</em> inertial reference systems. Guidance was lost; the rocket veered and exploded.</p>
+          <div class="card glow fragment"><div class="lesson"><div class="lt">Professional lesson</div><p class="lead" style="font-size:clamp(15px,2vmin,22px); margin-top:.4em">Reusing code is <em>not automatically safe.</em> The software was correct for Ariane 4 — and revalidated for nothing in Ariane 5. The value wasn't even needed after liftoff.</p></div></div>
+          <p class="fragment" style="font-size:clamp(15px,2.2vmin,26px); font-weight:700; line-height:1.25"><span class="qmark">“</span>The bug was not only in the code. It was in the <span class="u-amber">assumption</span> that old code was safe in a new system.”</p>
+          <p class="src fragment">Source: ESA / CNES Inquiry Board report (mechanism) · cost per press reporting</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16 · CASE Mars Climate Orbiter ---------------------------->
+  <section class="slide" data-notes="<b>Case 3 — Mars Climate Orbiter, lost 23 Sept 1999.</b> Ground software (Lockheed Martin) produced thruster impulse in pound-force-seconds (imperial); the navigation software (JPL) expected newton-seconds (metric). The unmodelled error accumulated; the orbiter entered the atmosphere far too low and was destroyed. ~$327M mission. NOT a math error — an interface/specification/verification failure." data-timing="5:30">
+    <div class="wrap">
+      <div class="case">
+        <div class="meta stack gap-m">
+          <div><span class="kicker violet">Case 03</span><h2 class="mt-s reveal-up d1">Mars Climate<br>Orbiter</h2><p class="small mt-s reveal-up d2">Lost on arrival · 23 Sept 1999</p></div>
+          <div class="illus reveal-up d2">
+            <svg viewBox="0 0 420 250" class="ill-mars" role="img" aria-label="Planned and actual approach trajectories diverging because of a units mismatch">
+              <circle cx="338" cy="158" r="58" fill="#a6492c"/>
+              <circle cx="318" cy="138" r="11" fill="#8f3c22"/><circle cx="356" cy="172" r="8" fill="#8f3c22"/><circle cx="330" cy="186" r="6" fill="#8f3c22"/>
+              <circle cx="338" cy="158" r="80" fill="none" stroke="rgba(169,139,255,.5)" stroke-width="14" opacity=".18"/>
+              <circle cx="338" cy="158" r="72" fill="none" stroke="rgba(169,139,255,.45)" stroke-dasharray="3 5"/>
+              <path class="planned" d="M24 70 C 150 56, 250 64, 300 96" fill="none" stroke="#34e1a5" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="320" stroke-dashoffset="320"/>
+              <path class="actual" d="M24 104 C 150 122, 240 138, 296 150" fill="none" stroke="#ff5470" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="320" stroke-dashoffset="320"/>
+              <g class="mboom pop" transform="translate(296 150)">
+                <g stroke="#ff5470" stroke-width="2.2" stroke-linecap="round">
+                  <line x1="0" y1="-12" x2="0" y2="-5"/><line x1="0" y1="12" x2="0" y2="5"/><line x1="-12" y1="0" x2="-5" y2="0"/><line x1="12" y1="0" x2="5" y2="0"/><line x1="-9" y1="-9" x2="-4" y2="-4"/><line x1="9" y1="9" x2="4" y2="4"/><line x1="9" y1="-9" x2="4" y2="-4"/><line x1="-9" y1="9" x2="-4" y2="4"/>
+                </g></g>
+              <text x="26" y="62" font-size="9" fill="#34e1a5">planned ≈ 226 km</text>
+              <text x="26" y="120" font-size="9" fill="#ff5470">actual ≈ 57 km · −170 km</text>
+              <g class="mult">
+                <rect x="22" y="206" width="58" height="22" rx="5" fill="rgba(255,255,255,.06)" stroke="rgba(169,139,255,.4)"/>
+                <text x="51" y="221" font-size="9.5" class="mono" fill="#c4b0ff" text-anchor="middle">lbf·s</text>
+                <text x="92" y="221" font-size="10" font-weight="800" fill="#ff5470" text-anchor="middle">×4.45</text>
+                <rect x="106" y="206" width="58" height="22" rx="5" fill="rgba(255,255,255,.06)" stroke="rgba(169,139,255,.4)"/>
+                <text x="135" y="221" font-size="9.5" class="mono" fill="#c4b0ff" text-anchor="middle">N·s ✗</text>
+              </g>
+            </svg>
+            <span class="frame-cap">interface failure · unit mismatch</span>
+          </div>
+          <div class="fragment"><div class="cat"><span class="tag iface">interface mismatch</span> <span class="tag proc">systems engineering</span></div></div>
+        </div>
+        <div class="stack gap-m">
+          <div class="statstrip fragment">
+            <div class="pill"><div class="n u-violet">lbf·s vs N·s</div><div class="l">Imperial output read as metric — off by ×4.45</div></div>
+            <div class="pill"><div class="n u-violet">~$327M</div><div class="l">Mission cost, lost</div></div>
+            <div class="pill"><div class="n u-violet">−170 km</div><div class="l">Lower than planned at Mars insertion</div></div>
+          </div>
+          <p class="lead fragment">Ground software reported engine impulse in <span class="mono">pound-force-seconds.</span> The navigation software read those numbers as <span class="mono">newton-seconds.</span> The trajectory error built up silently until the spacecraft passed <em>too close to Mars</em> and was torn apart.</p>
+          <div class="card glow fragment"><div class="lesson"><div class="lt">Professional lesson</div><p class="lead" style="font-size:clamp(15px,2vmin,22px); margin-top:.4em">Assumptions must be <em>explicit.</em> Units, formats, protocols and interfaces are not small details — they are <em>contracts.</em></p></div></div>
+          <p class="fragment" style="font-size:clamp(15px,2.2vmin,26px); font-weight:700; line-height:1.25"><span class="qmark">“</span>It was lost not because engineers couldn't calculate — but because two systems never <span class="u-violet">agreed on what the numbers meant.</span>”</p>
+          <p class="src fragment">Source: NASA — Mars Climate Orbiter mission findings</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17 · CASE CrowdStrike ------------------------------------->
+  <section class="slide" data-notes="<b>Case 4 — CrowdStrike, 19 July 2024.</b> A Rapid Response Content update (Channel File 291) for the Falcon sensor. The Content Validator had a bug; the content supplied more input fields than the interpreter expected → an out-of-bounds memory read → the Windows kernel crashed (BSOD). 8.5M devices (<1% of Windows machines) — but they ran airlines, banks, hospitals, 911. Note the blast-radius framing and the remediation: staggered/canary rollout, more testing, customer control over updates." data-timing="6:15">
+    <div class="wrap">
+      <div class="case">
+        <div class="meta stack gap-m">
+          <div><span class="kicker red">Case 04</span><h2 class="mt-s reveal-up d1">CrowdStrike<br>Global Outage</h2><p class="small mt-s reveal-up d2">19 July 2024</p></div>
+          <div class="illus reveal-up d2">
+            <svg viewBox="0 0 420 250" class="ill-cs" role="img" aria-label="A kernel rule reading a 21st field when only 20 array slots exist">
+              <text x="34" y="40" font-size="9" class="mono" fill="#8693ad">Content Interpreter · 20 fields supplied (index 0–19)</text>
+              <g fill="rgba(40,215,240,.10)" stroke="rgba(40,215,240,.5)">
+                <rect x="34" y="56" width="30" height="34" rx="4"/><rect x="68" y="56" width="30" height="34" rx="4"/><rect x="102" y="56" width="30" height="34" rx="4"/><rect x="136" y="56" width="30" height="34" rx="4"/><rect x="170" y="56" width="30" height="34" rx="4"/>
+              </g>
+              <g font-size="10" class="mono" fill="#7fe6f5" text-anchor="middle">
+                <text x="49" y="78">0</text><text x="83" y="78">1</text><text x="117" y="78">2</text><text x="151" y="78">…</text><text x="185" y="78">19</text>
+              </g>
+              <line class="bound" x1="210" y1="50" x2="210" y2="98" stroke="#ff5470" stroke-dasharray="4 4"/>
+              <rect class="oob" x="222" y="56" width="40" height="34" rx="4" fill="rgba(255,84,112,.12)" stroke="#ff5470"/>
+              <text x="242" y="77" font-size="11" font-weight="800" fill="#ff5470" text-anchor="middle">21?</text>
+              <text x="242" y="106" font-size="8" fill="#ff5470" text-anchor="middle">out of bounds</text>
+              <g transform="translate(34 96)"><g class="ptr" style="--x0:15px;--x1:208px">
+                <path d="M0 6 l7 -10 l7 10 z" fill="#fff"/><text x="7" y="24" font-size="8" class="mono" fill="#fff" text-anchor="middle">read</text>
+              </g></g>
+              <g class="machines">
+                <text x="34" y="150" font-size="9" class="mono" fill="#8693ad">8.5M Windows devices · &lt;1% of all machines</text>
+              </g>
+              <g class="machines" fill="#1357d6">
+                <rect x="34" y="160" width="9" height="9" rx="1.5"/><rect x="48" y="160" width="9" height="9" rx="1.5"/><rect x="62" y="160" width="9" height="9" rx="1.5"/><rect x="76" y="160" width="9" height="9" rx="1.5"/><rect x="90" y="160" width="9" height="9" rx="1.5"/><rect x="104" y="160" width="9" height="9" rx="1.5"/><rect x="118" y="160" width="9" height="9" rx="1.5"/><rect x="132" y="160" width="9" height="9" rx="1.5"/><rect x="146" y="160" width="9" height="9" rx="1.5"/><rect x="160" y="160" width="9" height="9" rx="1.5"/><rect x="174" y="160" width="9" height="9" rx="1.5"/><rect x="188" y="160" width="9" height="9" rx="1.5"/>
+                <rect x="34" y="174" width="9" height="9" rx="1.5"/><rect x="48" y="174" width="9" height="9" rx="1.5"/><rect x="62" y="174" width="9" height="9" rx="1.5"/><rect x="76" y="174" width="9" height="9" rx="1.5"/><rect x="90" y="174" width="9" height="9" rx="1.5"/><rect x="104" y="174" width="9" height="9" rx="1.5"/><rect x="118" y="174" width="9" height="9" rx="1.5"/><rect x="132" y="174" width="9" height="9" rx="1.5"/><rect x="146" y="174" width="9" height="9" rx="1.5"/><rect x="160" y="174" width="9" height="9" rx="1.5"/><rect x="174" y="174" width="9" height="9" rx="1.5"/><rect x="188" y="174" width="9" height="9" rx="1.5"/>
+                <rect x="34" y="188" width="9" height="9" rx="1.5"/><rect x="48" y="188" width="9" height="9" rx="1.5"/><rect x="62" y="188" width="9" height="9" rx="1.5"/><rect x="76" y="188" width="9" height="9" rx="1.5"/><rect x="90" y="188" width="9" height="9" rx="1.5"/><rect x="104" y="188" width="9" height="9" rx="1.5"/><rect x="118" y="188" width="9" height="9" rx="1.5"/><rect x="132" y="188" width="9" height="9" rx="1.5"/><rect x="146" y="188" width="9" height="9" rx="1.5"/><rect x="160" y="188" width="9" height="9" rx="1.5"/><rect x="174" y="188" width="9" height="9" rx="1.5"/><rect x="188" y="188" width="9" height="9" rx="1.5"/>
+              </g>
+              <g class="csbsod pop" transform="translate(300 150)">
+                <rect x="0" y="0" width="96" height="64" rx="7" fill="#1357d6"/>
+                <text x="12" y="26" font-size="20" font-weight="800" fill="#fff">:(</text>
+                <text x="12" y="44" font-size="8" fill="#dce8ff">PAGE_FAULT_IN_</text>
+                <text x="12" y="55" font-size="8" fill="#dce8ff">NONPAGED_AREA</text>
+              </g>
+            </svg>
+            <span class="frame-cap">supply-chain · out-of-bounds read</span>
+          </div>
+          <div class="fragment"><div class="cat"><span class="tag sec">supply-chain</span> <span class="tag proc">unsafe rollout</span></div></div>
+        </div>
+        <div class="stack gap-m">
+          <div class="statstrip fragment">
+            <div class="pill"><div class="n u-red">8.5M</div><div class="l">Windows devices crashed worldwide</div></div>
+            <div class="pill"><div class="n u-red">&lt;1%</div><div class="l">of all Windows machines — yet global</div></div>
+            <div class="pill"><div class="n u-red">78 min</div><div class="l">the bad file was live</div></div>
+            <div class="pill"><div class="n u-red">21 ≠ 20</div><div class="l">Rule read a 21st field; only 20 supplied</div></div>
+          </div>
+          <p class="lead fragment">A security-content update slipped past a <em>faulty validator.</em> A new rule then tried to read a <em>21st field</em> when the sensor only ever supplied <em>20</em> — an <span class="mono">out-of-bounds read</span> deep in the kernel. Every machine that pulled the file hit a BSOD — from a file that was live for just <em>78 minutes.</em></p>
+          <div class="card glow fragment"><div class="lesson"><div class="lt">Professional lesson</div><p class="lead" style="font-size:clamp(15px,2vmin,22px); margin-top:.4em">The percentage can be tiny — but if the affected systems are <em>critical,</em> the social blast radius is enormous. Airlines, banks and hospitals stopped.</p></div></div>
+          <p class="fragment" style="font-size:clamp(15px,2.2vmin,26px); font-weight:700; line-height:1.25"><span class="qmark">“</span>Modern failure is about <span class="u-red">blast radius:</span> one trusted update can ground airlines, banks, hospitals and governments.”</p>
+          <p class="src fragment">Source: CrowdStrike Post-Incident Review · Microsoft outage update</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 18 · CASE Therac-25 (ethical) ----------------------------->
+  <section class="slide" data-notes="<b>Optional / ethical — Therac-25, 1985–87.</b> A radiation therapy machine that massively overdosed patients at least six times; deaths and severe injuries. Causes: a race condition triggered by fast operator edits; software reused without independent verification; <b>hardware interlocks removed</b> versus earlier models; overconfidence in software; and slow response to reports. Use this for a serious tone. When software controls physical harm, 'bug' becomes an ethical word." data-timing="6:30">
+    <div class="wrap">
+      <div class="case">
+        <div class="meta stack gap-m">
+          <div><span class="kicker red">Optional · Ethics</span><h2 class="mt-s reveal-up d1">Therac-25</h2><p class="small mt-s reveal-up d2">Radiation overdoses · 1985–1987</p></div>
+          <div class="illus reveal-up d2">
+            <svg viewBox="0 0 420 250" class="ill-therac" role="img" aria-label="The X-ray safety target slides out of the beam path while a high-energy beam fires">
+              <defs><linearGradient id="dg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#34e1a5"/><stop offset="0.5" stop-color="#f7b733"/><stop offset="1" stop-color="#ff5470"/></linearGradient></defs>
+              <rect x="22" y="50" width="44" height="44" rx="6" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.18)"/>
+              <text x="44" y="77" font-size="9" class="mono" fill="#8693ad" text-anchor="middle">beam</text>
+              <rect class="beam" x="66" y="68" width="0" height="8" rx="2" fill="#ff5470" style="--w:280px"/>
+              <g class="target" style="--ty:-36px">
+                <rect x="150" y="50" width="20" height="44" rx="3" fill="rgba(40,215,240,.16)" stroke="#28d7f0"/>
+                <text x="160" y="44" font-size="8" class="mono" fill="#28d7f0" text-anchor="middle">target</text>
+              </g>
+              <text class="malf" x="240" y="44" font-size="13" font-weight="800" fill="#ff5470" text-anchor="middle" opacity="0">⚠ MALFUNCTION 54</text>
+              <circle cx="360" cy="60" r="9" fill="rgba(255,255,255,.5)"/>
+              <path d="M350 72 q10 -8 20 0 v22 h-20 z" fill="rgba(255,255,255,.5)"/>
+              <text x="160" y="112" font-size="8.5" class="mono" fill="#8693ad" text-anchor="middle">edit within 8s → race condition</text>
+              <path d="M70 220 A 60 60 0 0 1 190 220" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="11"/>
+              <path class="dosearc" d="M70 220 A 60 60 0 0 1 190 220" fill="none" stroke="url(#dg)" stroke-width="11" stroke-linecap="round" stroke-dasharray="189" stroke-dashoffset="189"/>
+              <text class="doselo" x="130" y="212" font-size="13" font-weight="800" fill="#34e1a5" text-anchor="middle">≈ 200 rad</text>
+              <text class="dosehi" x="130" y="212" font-size="13" font-weight="800" fill="#ff5470" text-anchor="middle" opacity="0">≈ 25 000 rad</text>
+              <text x="130" y="232" font-size="8" class="mono" fill="#8693ad" text-anchor="middle">delivered dose</text>
+              <text x="300" y="160" font-size="9" class="mono" fill="#ff5470" text-anchor="middle">hardware interlock</text>
+              <text x="300" y="174" font-size="11" font-weight="800" fill="#ff5470" text-anchor="middle">REMOVED ✗</text>
+            </svg>
+            <span class="frame-cap">race condition · removed safeguard</span>
+          </div>
+          <div class="fragment"><div class="cat"><span class="tag sw">safety-critical</span> <span class="tag proc">weak response</span></div></div>
+        </div>
+        <div class="stack gap-m">
+          <div class="statstrip fragment">
+            <div class="pill"><div class="n u-red">≥ 6</div><div class="l">Massive overdoses; deaths &amp; severe injury</div></div>
+            <div class="pill"><div class="n u-red">~100×</div><div class="l">Over the intended therapeutic dose</div></div>
+            <div class="pill"><div class="n u-red">8 s</div><div class="l">The edit window that triggered the race</div></div>
+          </div>
+          <p class="lead fragment">A <em>race condition</em> — triggered when an operator edited the prescription quickly — let the machine fire a massive dose. Software was reused without independent verification, and the <em>hardware interlocks</em> that protected earlier models had been <em>removed.</em></p>
+          <div class="card glow fragment"><div class="lesson"><div class="lt">Professional lesson</div><p class="lead" style="font-size:clamp(15px,2vmin,22px); margin-top:.4em">In safety-critical systems, software must <em>not</em> be the only line of defence. Interlocks, risk analysis, and taking user reports seriously are <em>ethical obligations.</em></p></div></div>
+          <p class="fragment" style="font-size:clamp(15px,2.2vmin,26px); font-weight:700; line-height:1.25"><span class="qmark">“</span>When software controls physical harm, <span class="u-red">“bug” becomes an ethical word.</span>”</p>
+          <p class="src fragment">Source: Leveson &amp; Turner — investigation of the Therac-25 accidents</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 19 · CASE Knight Capital (finance) ------------------------>
+  <section class="slide" data-notes="<b>Optional / finance — Knight Capital, 1 Aug 2012.</b> A botched deploy left dormant legacy 'Power Peg' code that a repurposed flag reactivated on a server that missed the new code. In ~45 minutes it sent 4M+ erroneous orders trying to fill 212, traded 397M shares, lost ~$460M, and the firm nearly died. $12M SEC penalty for the Market Access Rule. Lesson: automation increases the speed of failure — you need kill switches." data-timing="6:45">
+    <div class="wrap">
+      <div class="case">
+        <div class="meta stack gap-m">
+          <div><span class="kicker amber">Optional · Finance</span><h2 class="mt-s reveal-up d1">Knight<br>Capital</h2><p class="small mt-s reveal-up d2">45 minutes · 1 August 2012</p></div>
+          <div class="illus reveal-up d2">
+            <svg viewBox="0 0 420 250" class="ill-knight" role="img" aria-label="Seven servers updated, one left running dormant code that floods the market as the P&amp;L plunges">
+              <text x="24" y="22" font-size="9" class="mono" fill="#8693ad">8 SMARS servers · new code deployed to 7 of 8</text>
+              <g>
+                <rect class="srv" x="24" y="30" width="38" height="30" rx="5" fill="rgba(52,225,165,.12)" stroke="#34e1a5" style="animation-delay:.1s"/>
+                <rect class="srv" x="71" y="30" width="38" height="30" rx="5" fill="rgba(52,225,165,.12)" stroke="#34e1a5" style="animation-delay:.22s"/>
+                <rect class="srv" x="118" y="30" width="38" height="30" rx="5" fill="rgba(52,225,165,.12)" stroke="#34e1a5" style="animation-delay:.34s"/>
+                <rect class="srv" x="165" y="30" width="38" height="30" rx="5" fill="rgba(52,225,165,.12)" stroke="#34e1a5" style="animation-delay:.46s"/>
+                <rect class="srv" x="212" y="30" width="38" height="30" rx="5" fill="rgba(52,225,165,.12)" stroke="#34e1a5" style="animation-delay:.58s"/>
+                <rect class="srv" x="259" y="30" width="38" height="30" rx="5" fill="rgba(52,225,165,.12)" stroke="#34e1a5" style="animation-delay:.70s"/>
+                <rect class="srv" x="306" y="30" width="38" height="30" rx="5" fill="rgba(52,225,165,.12)" stroke="#34e1a5" style="animation-delay:.82s"/>
+                <rect class="pp" x="353" y="30" width="38" height="30" rx="5" fill="rgba(255,84,112,.14)" stroke="#ff5470"/>
+              </g>
+              <g font-size="13" fill="#34e1a5" text-anchor="middle">
+                <text x="43" y="50">✓</text><text x="90" y="50">✓</text><text x="137" y="50">✓</text><text x="184" y="50">✓</text><text x="231" y="50">✓</text><text x="278" y="50">✓</text><text x="325" y="50">✓</text>
+              </g>
+              <text class="pp" x="372" y="50" font-size="9" font-weight="800" fill="#ff5470" text-anchor="middle">PP</text>
+              <text class="pp" x="372" y="74" font-size="7.5" class="mono" fill="#ff5470" text-anchor="middle">2003 code</text>
+              <g class="ord" fill="#f7b733">
+                <circle cx="360" cy="88" r="3" style="animation-delay:1.0s"/><circle cx="342" cy="98" r="3" style="animation-delay:1.08s"/><circle cx="370" cy="104" r="3" style="animation-delay:1.16s"/><circle cx="326" cy="110" r="3" style="animation-delay:1.24s"/><circle cx="352" cy="116" r="3" style="animation-delay:1.32s"/><circle cx="312" cy="120" r="3" style="animation-delay:1.40s"/><circle cx="338" cy="128" r="3" style="animation-delay:1.48s"/><circle cx="296" cy="126" r="3" style="animation-delay:1.56s"/><circle cx="322" cy="138" r="3" style="animation-delay:1.64s"/><circle cx="280" cy="134" r="3" style="animation-delay:1.72s"/>
+              </g>
+              <text x="24" y="100" font-size="9" class="mono" fill="#8693ad">212 orders → millions of executions ↘</text>
+              <line x1="40" y1="150" x2="396" y2="150" stroke="rgba(255,255,255,.14)" stroke-dasharray="3 4"/>
+              <text x="44" y="146" font-size="8" class="mono" fill="#8693ad">$0</text>
+              <path class="pnl" d="M42 150 C 150 168, 250 214, 392 232" fill="none" stroke="#ff5470" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="370" stroke-dashoffset="370"/>
+              <text class="pnlval" x="392" y="222" font-size="13" font-weight="800" fill="#ff5470" text-anchor="end" opacity="0">−$460M</text>
+              <text class="pnlval" x="392" y="208" font-size="8" class="mono" fill="#8693ad" text-anchor="end" opacity="0">≈ $10M / min · 45:00</text>
+            </svg>
+            <span class="frame-cap">deployment failure · no stop condition</span>
+          </div>
+          <div class="fragment"><div class="cat"><span class="tag proc">deployment failure</span> <span class="tag sw">automated trading</span></div></div>
+        </div>
+        <div class="stack gap-m">
+          <div class="statstrip fragment">
+            <div class="pill"><div class="n u-amber">$460M</div><div class="l">Lost in ~45 minutes</div></div>
+            <div class="pill"><div class="n u-amber">4M+</div><div class="l">Executions, to fill just 212 orders</div></div>
+            <div class="pill"><div class="n u-amber">397M</div><div class="l">Shares traded by accident</div></div>
+            <div class="pill"><div class="n u-amber">$12M</div><div class="l">SEC penalty · firm nearly bankrupt</div></div>
+          </div>
+          <p class="lead fragment">A new release wasn't deployed to <em>one of eight servers.</em> A reused flag woke <em>dormant legacy code from 2003</em> on it — and orders fired with no stop condition: roughly <em>$10 million a minute.</em> 97 automated warning emails went out before the open. None were read.</p>
+          <div class="card glow fragment"><div class="lesson"><div class="lt">Professional lesson</div><p class="lead" style="font-size:clamp(15px,2vmin,22px); margin-top:.4em">Fast automated systems need <em>kill switches,</em> deployment discipline, monitoring and risk controls — before they run, not after.</p></div></div>
+          <p class="fragment" style="font-size:clamp(15px,2.2vmin,26px); font-weight:700; line-height:1.25"><span class="qmark">“</span>Automation increases speed — <span class="u-amber">including the speed of failure.</span>”</p>
+          <p class="src fragment">Source: U.S. SEC — Knight Capital Market Access Rule order (2013)</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 20 · THE PATTERN ------------------------------------------>
+  <section class="slide" data-notes="Synthesis. Pull the four cases back to the chain. Each had a reused assumption (Ariane), an interface gap (Mars), a process/rollout gap (CrowdStrike, Knight), a missing safeguard (Therac). None were 'just a bug'. This sets up prevention." data-timing="7:15">
+    <div class="wrap">
+      <span class="kicker">The pattern across all of them</span>
+      <h2 class="mt-s reveal-up d1">Same chain, different costume</h2>
+      <div class="grid g2 mt-m">
+        <div class="card fragment"><h3>🔁 A reused assumption</h3><p class="small mt-s">Old code, trusted in a new context it was never validated for. <span class="u-amber">Ariane 5.</span></p></div>
+        <div class="card fragment"><h3>🔌 An unspoken interface</h3><p class="small mt-s">Two parts disagreeing on meaning — units, fields, protocol. <span class="u-violet">Mars · CrowdStrike.</span></p></div>
+        <div class="card fragment"><h3>⚙️ A weak process</h3><p class="small mt-s">A deploy, a validator, a review that didn't catch it. <span class="u-red">CrowdStrike · Knight.</span></p></div>
+        <div class="card fragment"><h3>🛡️ A removed safeguard</h3><p class="small mt-s">The last line of defence taken away. <span class="u-red">Therac-25.</span></p></div>
+      </div>
+      <p class="lead mt-l fragment" style="text-align:center">In every case, there was a moment where the chain <em>could have been broken.</em></p>
+    </div>
+  </section>
+
+  <!-- 21 · PREVENTION divider ----------------------------------->
+  <section class="slide" data-notes="Transition to the constructive half. We can't remove all faults — but we can stop fault→error→failure→incident from propagating. Each safeguard is a barrier in the chain." data-timing="7:30">
+    <div class="wrap row" style="align-items:center; gap:40px">
+      <div class="bignum reveal-up d1">03</div>
+      <div>
+        <span class="kicker green">What professionals actually do</span>
+        <h2 class="mt-s reveal-up d2">You can't delete bugs.<br>You can <span class="u-green">break the chain.</span></h2>
+        <p class="lead mt-s reveal-up d3" style="max-width:580px">We will never remove every fault. So professional practice is about stopping <span class="mono">fault → error → failure → incident</span> from propagating to the end.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 22 · DEFENSE IN DEPTH (swiss cheese) ---------------------->
+  <section class="slide" data-notes="Defense in depth / the Swiss Cheese model (James Reason). Every layer has holes; disaster happens only when the holes line up. Each safeguard catches a different stage. Map each layer to a case it would have caught." data-timing="7:45">
+    <div class="wrap">
+      <span class="kicker green">Defense in depth · the Swiss-cheese model</span>
+      <h2 class="mt-s reveal-up d1">Every layer has holes. <span class="u-green">Stack enough layers.</span></h2>
+      <div class="cheese mt-m">
+        <div class="layer fragment"><div class="lname">📋 Requirements clarity</div><div class="lwhat">catches wrong assumptions</div><div class="holes"><span style="left:22%"></span><span style="left:68%"></span></div></div>
+        <div class="layer fragment"><div class="lname">🧩 Design &amp; code review</div><div class="lwhat">catches architectural &amp; hidden defects</div><div class="holes"><span style="left:40%"></span><span style="left:80%"></span></div></div>
+        <div class="layer fragment"><div class="lname">🧪 Testing · fuzzing · fault injection</div><div class="lwhat">catches edge cases &amp; bad input — would have caught CrowdStrike</div><div class="holes"><span style="left:15%"></span><span style="left:55%"></span></div></div>
+        <div class="layer fragment"><div class="lname">🔗 Interface contracts &amp; simulation</div><div class="lwhat">catches unit/protocol mismatch — Mars, Ariane</div><div class="holes"><span style="left:30%"></span><span style="left:72%"></span></div></div>
+        <div class="layer fragment"><div class="lname">🐤 Canary &amp; staged rollout</div><div class="lwhat">limits blast radius — would have contained CrowdStrike &amp; Knight</div><div class="holes"><span style="left:48%"></span></div></div>
+        <div class="layer fragment"><div class="lname">📈 Monitoring · rollback · kill switch</div><div class="lwhat">detects silent failure &amp; recovers fast</div><div class="holes"><span style="left:60%"></span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 23 · BLAMELESS POSTMORTEMS -------------------------------->
+  <section class="slide" data-notes="Google SRE: postmortems after significant events are expected, and must be <b>blameless</b> — focused on contributing causes, not indicting individuals. Blame makes people hide problems; learning makes systems resilient. This is culture, not just tooling." data-timing="8:15">
+    <div class="wrap">
+      <div class="row gap-l" style="align-items:center">
+        <div class="col">
+          <span class="kicker green">Learn, don't punish</span>
+          <h2 class="mt-s reveal-up d1">Blameless<br>postmortems</h2>
+          <p class="lead mt-s reveal-up d2">After every significant failure: write down what happened and <em>why</em> — without indicting a person. Blame teaches people to <em>hide</em> problems. Learning teaches systems to <em>survive</em> them.</p>
+          <p class="src mt-s reveal-up d2">Source: Google SRE — Postmortem Culture</p>
+        </div>
+        <div class="col stack gap-s">
+          <div class="card fragment"><h3 class="u-red">❌ Blame culture</h3><p class="small mt-s">"Who broke it?" → people stay quiet → the same failure returns.</p></div>
+          <div style="text-align:center; font-size:1.6em; color:var(--faint)" class="fragment">↓</div>
+          <div class="card glow fragment"><h3 class="u-green">✅ Blameless culture</h3><p class="small mt-s">"What let this happen?" → causes surface → the chain gets a new barrier.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 24 · PROFESSIONAL RESPONSIBILITY -------------------------->
+  <section class="slide" data-notes="Tie to the ACM Code of Ethics — the Professional Practices anchor. Strive for high quality in process AND product; give comprehensive evaluation of risks; build robust, usable security; respect those affected; serve the public good. Quality is a professional duty, not a personal preference." data-timing="9:00">
+    <div class="wrap">
+      <span class="kicker violet">The professional's duty · ACM Code of Ethics</span>
+      <h2 class="mt-s reveal-up d1">Quality is not a preference. It is a <span class="u-violet">duty.</span></h2>
+      <div class="grid g2 mt-m">
+        <div class="card fragment"><h3>🎯 High quality in process <em>and</em> product</h3><p class="small mt-s">Not just shipping — building it well, and reviewing how it was built.</p></div>
+        <div class="card fragment"><h3>⚠️ Comprehensive risk evaluation</h3><p class="small mt-s">Identify and analyse the ways your system could cause serious harm.</p></div>
+        <div class="card fragment"><h3>🔒 Robust, usable security</h3><p class="small mt-s">Design for the failure and the attacker, not just the happy path.</p></div>
+        <div class="card fragment"><h3>🌍 Respect those affected &amp; the public good</h3><p class="small mt-s">The people downstream of your code never signed off on your assumptions.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 25 · CLOSING ---------------------------------------------->
+  <section class="slide center" data-notes="<b>The close. Land it slowly.</b> Bring back the opening image — failure looks sudden, but it has a history. The lesson isn't that computers are fragile; it's that systems inherit our assumptions. Professional practice is making those assumptions visible, testing them, and designing recovery before users pay the price. Then: 'Remember the chain.' Thank them." data-timing="9:30">
+    <div class="wrap">
+      <span class="kicker amber" style="justify-content:center">The takeaway</span>
+      <p class="pull mt-m reveal-up d1">Systems don't just inherit our code.<br>They inherit our <span class="grad-hot">assumptions.</span></p>
+      <p class="lead mt-l reveal-up d2" style="max-width:840px; margin-inline:auto">Professional practice means making those assumptions <em>visible,</em> testing them, reviewing them, and designing <em>recovery</em> — before users ever pay the price.</p>
+      <p class="reveal-up d3" style="margin-top:1.6em; font-size:clamp(22px,4vmin,46px); font-weight:800; letter-spacing:.02em">Remember the <span class="grad">chain.</span></p>
+    </div>
+  </section>
+
+  <!-- 26 · REFERENCES ------------------------------------------->
+  <section class="slide" data-notes="Hold for questions. Sources are on screen for credibility. Thank the audience." data-timing="10:00">
+    <div class="wrap">
+      <div class="row" style="align-items:flex-end; justify-content:space-between">
+        <div><span class="kicker">Thank you</span><h2 class="mt-s reveal-up d1">Questions?</h2></div>
+        <div class="brandmark reveal-up d1"><span class="glyph"></span> The Anatomy of Failure</div>
+      </div>
+      <div class="card mt-m reveal-up d2" style="padding:18px 22px">
+        <div class="grid g2" style="gap:6px 34px">
+          <p class="small">• Avizienis, Laprie &amp; Randell — <em>Basic Concepts &amp; Taxonomy of Dependable Computing</em></p>
+          <p class="small">• Microsoft Learn — <em>Bug Checks (Stop Code Errors)</em></p>
+          <p class="small">• ESA — <em>Ariane 501 Inquiry Board Report</em> (1996)</p>
+          <p class="small">• NASA — <em>Mars Climate Orbiter</em> mission findings (1999)</p>
+          <p class="small">• CrowdStrike — <em>Falcon Content Update Post-Incident Review</em> (2024)</p>
+          <p class="small">• Microsoft — <em>Helping customers through the CrowdStrike outage</em></p>
+          <p class="small">• Leveson &amp; Turner — <em>An Investigation of the Therac-25 Accidents</em></p>
+          <p class="small">• U.S. SEC — <em>Knight Capital Market Access Rule</em> (Release 2013-222)</p>
+          <p class="small">• Google SRE — <em>Postmortem Culture: Blameless</em></p>
+          <p class="small">• ACM — <em>Code of Ethics &amp; Professional Conduct</em> (2018)</p>
+          <p class="small">• James Reason — <em>Swiss-Cheese Model of accident causation</em></p>
+          <p class="small">• Lamport et al. — <em>The Byzantine Generals Problem</em></p>
+        </div>
+      </div>
+      <p class="tiny mt-s reveal-up d2">Press <span class="mono">N</span> for speaker notes · <span class="mono">O</span> for overview · <span class="mono">F</span> for fullscreen</p>
+    </div>
+  </section>
+
+  <!-- 27 · APPENDIX divider ------------------------------------->
+  <section class="slide" data-notes="Backup slides — only show if asked in Q&A. Every one is another link in the same chain, plus one example of the fix." data-timing="backup">
+    <div class="wrap row" style="align-items:center; gap:40px">
+      <div class="bignum reveal-up d1">+</div>
+      <div>
+        <span class="kicker green">Backup · for questions</span>
+        <h2 class="mt-s reveal-up d2">If you want<br>more evidence…</h2>
+        <p class="lead mt-s reveal-up d3" style="max-width:580px">Six more famous failures — and one example of <em class="u-green">redundancy done right.</em></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 28 · MORE FAMOUS FAILURES --------------------------------->
+  <section class="slide" data-notes="Rapid-fire backup cases. Pentium = hardware value error. AT&T = one break statement, cascading recursive failure. Northeast 2003 = race condition at societal scale. 737 MAX = single-sensor trust, 346 dead. Y2K = dormant fault + prevention that worked. Heartbleed = a fault that was also a security incident. Pick whichever the question invites." data-timing="backup">
+    <div class="wrap">
+      <span class="kicker">Backup · the chain, everywhere you look</span>
+      <h2 class="mt-s reveal-up d1">Six more for the record</h2>
+      <div class="grid g3 mt-m">
+        <div class="card fragment"><span class="tag hw">1994 · hardware</span><h3 class="mt-s">Pentium FDIV</h3><p class="small mt-s">A division lookup table missing <em>5 entries</em> returned wrong results. Intel's first recall — a <span class="u-amber">$475M</span> charge.</p></div>
+        <div class="card fragment"><span class="tag sw">1990 · cascade</span><h3 class="mt-s">AT&amp;T collapse</h3><p class="small mt-s">One misplaced <span class="mono">break</span> in recovery code rippled through <em>114 switches.</em> ~50% of calls failed for 9 hours; <span class="u-amber">&gt;$60M.</span></p></div>
+        <div class="card fragment"><span class="tag sw">2003 · race condition</span><h3 class="mt-s">Northeast Blackout</h3><p class="small mt-s">A race condition stalled GE's XA/21 alarms — operators flew blind. <span class="u-red">~55 million</span> people lost power.</p></div>
+        <div class="card fragment"><span class="tag sec">2018–19 · safety</span><h3 class="mt-s">Boeing 737 MAX</h3><p class="small mt-s">MCAS trusted a <em>single</em> angle-of-attack sensor and pushed the nose down. <span class="u-red">346 lives lost.</span></p></div>
+        <div class="card fragment"><span class="tag proc">2000 · dormant fault</span><h3 class="mt-s">Y2K</h3><p class="small mt-s">A 2-digit-year fault, dormant for decades. A massive prevention effort meant the failure <span class="u-green">mostly never happened.</span></p></div>
+        <div class="card fragment"><span class="tag sec">2014 · security</span><h3 class="mt-s">Heartbleed</h3><p class="small mt-s">A missing bounds check in OpenSSL let attackers read server memory — a fault that was also a <span class="u-red">global security incident.</span></p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 29 · REDUNDANCY DONE RIGHT -------------------------------->
+  <section class="slide" data-notes="The optimistic counterpoint to Ariane. Identical backups fail identically against a deterministic software fault — Ariane proved it. The answer is DISSIMILAR / N-version redundancy: independent teams build independent implementations so they can't share the same bug. Space Shuttle flew 4 identical primary computers plus a 5th running separately-written Backup Flight Software. Modern fly-by-wire (Boeing 777, Airbus) uses dissimilar hardware+software channels. Redundancy only helps if the copies can fail differently." data-timing="backup">
+    <div class="wrap">
+      <div class="row gap-l" style="align-items:center">
+        <div class="col">
+          <span class="kicker green">The fix Ariane needed</span>
+          <h2 class="mt-s reveal-up d1">Redundancy,<br>done right</h2>
+          <p class="lead mt-s reveal-up d2">Two <em>identical</em> backups fail identically against a deterministic bug — that's why Ariane 5's second unit died <em>0.05s</em> after the first. The answer is <em class="u-green">dissimilar</em> redundancy: independent teams, independent implementations, so they can't share the same fault.</p>
+        </div>
+        <div class="col stack gap-s">
+          <div class="card fragment"><h3 class="u-green">🚀 Space Shuttle</h3><p class="small mt-s">Four identical flight computers <em>plus a fifth</em> running separately-written Backup Flight Software — a different team, a different program.</p></div>
+          <div class="card fragment"><h3 class="u-green">✈️ Modern fly-by-wire</h3><p class="small mt-s">Boeing 777 &amp; Airbus use <em>dissimilar</em> hardware and software channels, so a single coding fault can't take them all down at once.</p></div>
+          <div class="card glow fragment"><p class="lead" style="font-size:clamp(14px,1.9vmin,21px)">Redundancy only helps if the copies can <em>fail differently.</em></p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /deck -->
+
+<!-- chrome -->
+<div class="progress" id="progress"></div>
+<div class="hud left"><div class="brandmark"><span class="glyph"></span> The Anatomy of Failure</div></div>
+<div class="hud right"><span class="seg" id="cur">1</span>&nbsp;/&nbsp;<span id="total">26</span></div>
+<div class="navbtns">
+  <button id="prev" title="Previous (←)">‹</button>
+  <button id="next" title="Next (→)">›</button>
+</div>
+
+<div class="notes" id="notes"><span class="timing" id="ntime"></span><h4>Speaker notes</h4><div class="nbody" id="nbody"></div></div>
+
+<div class="hint" id="hint">
+  <span><kbd>→</kbd> next · <kbd>←</kbd> back · <kbd>F</kbd> fullscreen · <kbd>N</kbd> notes · <kbd>?</kbd> help</span>
+</div>
+
+<div class="help" id="help"><div class="panel">
+  <h3>Keyboard controls</h3>
+  <div class="k"><span>Next slide / reveal</span><span><kbd>→</kbd> <kbd>Space</kbd> <kbd>↓</kbd></span></div>
+  <div class="k"><span>Previous</span><span><kbd>←</kbd> <kbd>↑</kbd></span></div>
+  <div class="k"><span>First / last slide</span><span><kbd>Home</kbd> <kbd>End</kbd></span></div>
+  <div class="k"><span>Fullscreen</span><span><kbd>F</kbd></span></div>
+  <div class="k"><span>Speaker notes</span><span><kbd>N</kbd></span></div>
+  <div class="k"><span>Slide overview</span><span><kbd>O</kbd></span></div>
+  <div class="k"><span>Jump to slide</span><span><kbd>1</kbd>–<kbd>9</kbd></span></div>
+  <div class="k"><span>This help</span><span><kbd>?</kbd></span></div>
+</div></div>
+
+<script>
+(function(){
+  const deck   = document.getElementById('deck');
+  const slides = Array.from(deck.querySelectorAll('.slide'));
+  const progress = document.getElementById('progress');
+  const curEl  = document.getElementById('cur');
+  const totalEl= document.getElementById('total');
+  const notes  = document.getElementById('notes');
+  const nbody  = document.getElementById('nbody');
+  const ntime  = document.getElementById('ntime');
+  const help   = document.getElementById('help');
+  const hint   = document.getElementById('hint');
+
+  let cur = 0, frag = 0, notesOn = false, overview = false;
+  totalEl.textContent = slides.length;
+
+  const frags = s => Array.from(s.querySelectorAll('.fragment'));
+
+  function render(dir){
+    slides.forEach((s,i)=>{
+      s.classList.toggle('active', i===cur);
+      if(i!==cur) s.classList.remove('exit-left');
+    });
+    const s = slides[cur];
+    const fr = frags(s);
+    fr.forEach((f,i)=> f.classList.toggle('visible', i<frag));
+    progress.style.width = (cur/(slides.length-1))*100 + '%';
+    curEl.textContent = cur+1;
+    // notes
+    nbody.innerHTML = s.getAttribute('data-notes') || '<i>No notes for this slide.</i>';
+    ntime.textContent = s.getAttribute('data-timing') ? '⏱ '+s.getAttribute('data-timing') : '';
+  }
+
+  function next(){
+    const s = slides[cur];
+    const fr = frags(s);
+    if(frag < fr.length){ frag++; render(); return; }
+    if(cur < slides.length-1){ slides[cur].classList.add('exit-left'); cur++; frag=0; render(1); }
+  }
+  function prev(){
+    if(frag > 0){ frag--; render(); return; }
+    if(cur > 0){ cur--; const fr = frags(slides[cur]); frag = fr.length; render(-1); }
+  }
+  function goto(i){ cur = Math.max(0, Math.min(slides.length-1, i)); frag = 0; render(); }
+
+  function toggleNotes(){ notesOn=!notesOn; notes.classList.toggle('show', notesOn); }
+  function toggleHelp(){ help.classList.toggle('show'); }
+  function toggleFs(){ if(!document.fullscreenElement){ document.documentElement.requestFullscreen?.(); } else { document.exitFullscreen?.(); } }
+  function toggleOverview(){
+    overview=!overview; document.body.classList.toggle('ov', overview);
+    if(overview){ slides.forEach((s,i)=> s.onclick = ()=>{ overview=false; document.body.classList.remove('ov'); goto(i); }); }
+  }
+
+  document.addEventListener('keydown', e=>{
+    const k = e.key;
+    if(k==='ArrowRight'||k===' '||k==='ArrowDown'||k==='PageDown'){ e.preventDefault(); next(); }
+    else if(k==='ArrowLeft'||k==='ArrowUp'||k==='PageUp'){ e.preventDefault(); prev(); }
+    else if(k==='Home'){ goto(0); }
+    else if(k==='End'){ goto(slides.length-1); }
+    else if(k==='f'||k==='F'){ toggleFs(); }
+    else if(k==='n'||k==='N'){ toggleNotes(); }
+    else if(k==='o'||k==='O'){ toggleOverview(); }
+    else if(k==='?'){ toggleHelp(); }
+    else if(k==='Escape'){ help.classList.remove('show'); if(overview) toggleOverview(); }
+    else if(/^[1-9]$/.test(k)){ goto(parseInt(k,10)-1); }
+  });
+
+  document.getElementById('next').onclick = next;
+  document.getElementById('prev').onclick = prev;
+
+  // click-to-advance on the deck (ignore buttons/links/notes)
+  deck.addEventListener('click', e=>{
+    if(overview) return;
+    if(e.target.closest('button,a,.notes')) return;
+    next();
+  });
+
+  // touch swipe
+  let tx=0, ty=0;
+  deck.addEventListener('touchstart', e=>{ tx=e.touches[0].clientX; ty=e.touches[0].clientY; }, {passive:true});
+  deck.addEventListener('touchend', e=>{
+    const dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty;
+    if(Math.abs(dx)>50 && Math.abs(dx)>Math.abs(dy)){ dx<0 ? next() : prev(); }
+  }, {passive:true});
+
+  // hash deep-link (#7) and restore
+  function fromHash(){ const n=parseInt(location.hash.replace('#',''),10); if(!isNaN(n)) cur=Math.max(0,Math.min(slides.length-1,n-1)); }
+  fromHash();
+  render();
+
+  // fade the hint after a few interactions
+  let moves=0; const fade=()=>{ if(++moves>=3){ hint.style.opacity='0'; document.removeEventListener('keydown',fade); deck.removeEventListener('click',fade);} };
+  document.addEventListener('keydown', fade); deck.addEventListener('click', fade);
+  setTimeout(()=>{ hint.style.opacity='0'; }, 9000);
+})();
+</script>
+</body>
+</html>

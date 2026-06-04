@@ -13,13 +13,15 @@ A self-contained, animated keynote presentation for a **Professional Practices**
 No build step, no install. Just open the file:
 
 ```text
-computer-failures-presentation.html
+index.html
 ```
 
 - **Double-click** it, or drag it into Chrome / Edge / Firefox.
 - Press **`F`** for fullscreen and present.
 
 That's it. Everything (engine, styling, animations, and the six case-study diagrams) is inlined in the one file.
+
+**On a phone?** The deck is responsive. Open the same file — or a hosted URL (e.g. GitHub Pages, which is why it's named `index.html`) — on mobile: layouts stack into a single column, each slide scrolls, all build-steps are shown, and tap / swipe moves between slides. The desktop view is unchanged.
 
 ---
 
@@ -50,6 +52,7 @@ The talk is paced for **~8–10 minutes**. Slides 1–26 are the core; slides 27
 - **Six bespoke animated SVG diagrams** — each *visualises the actual error mechanism* (see below). They animate on slide entry and replay when you navigate back.
 - **Built-in speaker notes** (`N`) with per-slide timing cues.
 - **Accessibility-aware** — honours `prefers-reduced-motion` to dampen animation for sensitive viewers.
+- **Responsive** — a mobile layer (≤ 820px) stacks every layout, makes slides scrollable, turns the chain diagram vertical, and reveals all build-steps for reading on a phone — all scoped to media queries, so the desktop view is byte-for-byte unchanged.
 
 ---
 
@@ -139,7 +142,7 @@ It's plain HTML/CSS/JS — open it in any editor.
 
 ```text
 software-ethics/
-├── computer-failures-presentation.html   # the entire deck (open this)
+├── index.html   # the entire deck (open this)
 └── README.md
 ```
 
